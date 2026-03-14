@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         OmniKnowledge Nexus (Stable Core V6.6)
+// @name         OmniKnowledge Nexus (Stable Core V6.7 - Full Dashboard)
 // @namespace    http://tampermonkey.net/
-// @version      6.6
-// @description  Professional Knowledge Management System & Web Collector (Template Version)
+// @version      6.7
+// @description  نظام إدارة المعرفة - النسخة الكاملة مع عرض الروابط وإصلاح يوتيوب
 // @author       Vigilante0101
 // @match        *://*/*
 // @match        file:///*index.html*
@@ -41,9 +41,9 @@
         return db;
     }
 
-    const getIcon = (catName, db) => db.categoryIcons[catName] || "🔖";
+    const getIcon = (catName, db) => db.categoryIcons?.[catName] || "🔖";
 
-    // التوجيه: لو الرابط فيه ملف الواجهة أو رابط جيت هاب، شغل اللوحة. لو موقع عادي، شغل الزر.
+    // التوجيه
     const isDashboard = window.location.href.includes('index.html') || 
                         window.location.href.includes('MyNetwork.html') || 
                         window.location.href.includes('vigilante0101.github.io/OmniKnowledge-Nexus');
@@ -54,15 +54,26 @@
         initCollector();
     }
 
+    // --- Helper for Safe Elements ---
+    const create = (tag, style = {}, props = {}) => {
+        const el = document.createElement(tag);
+        Object.assign(el.style, style);
+        Object.assign(el, props);
+        return el;
+    };
+
     // ==========================================
-    // 1. Collector Logic (Safe & Persistent)
+    // 1. Collector Logic (إضافة البيانات)
     // ==========================================
     function initCollector() {
         if (document.getElementById('floating-grid-btn')) return;
-        const btn = document.createElement('button');
-        btn.id = 'floating-grid-btn';
-        btn.textContent = '💾';
-        btn.style.cssText = `position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; width: 60px; height: 60px; border-radius: 50%; background: #1877f2; color: white; font-size: 28px; border: 3px solid #fff; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);`;
+        const btn = create('button', {
+            position: 'fixed', bottom: '30px', right: '30px', zIndex: '2147483647',
+            width: '60px', height: '60px', borderRadius: '50%', background: '#1877f2',
+            color: 'white', fontSize: '28px', border: '3px solid #fff', cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.3)', display: 'block'
+        }, { id: 'floating-grid-btn', textContent: '💾' });
+
         btn.onclick = (e) => { e.preventDefault(); openAddModal(); };
         document.body.appendChild(btn);
         new MutationObserver(() => { if (!document.getElementById('floating-grid-btn')) document.body.appendChild(btn); }).observe(document.body, { childList: true });
@@ -72,34 +83,35 @@
         if (document.getElementById('modal-overlay')) return;
         const currentTitle = document.title;
         const currentUrl = window.location.href;
-        const overlay = document.createElement('div');
-        overlay.id = 'modal-overlay';
-        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 2147483647; display: flex; justify-content: center; align-items: center; direction: rtl; font-family: sans-serif;`;
+        const overlay = create('div', {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', zIndex: '2147483647',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', direction: 'rtl'
+        }, { id: 'modal-overlay' });
 
-        const card = document.createElement('div');
-        card.style.cssText = `background: #fff; padding: 25px; border-radius: 16px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);`;
+        const card = create('div', { background: '#fff', padding: '25px', borderRadius: '16px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', fontFamily: 'sans-serif' });
 
-        const h3 = document.createElement('h3'); h3.textContent = 'إضافة مصدر للشبكة'; h3.style.cssText = 'text-align:center; color:#1877f2; margin-top:0;'; card.appendChild(h3);
+        card.appendChild(create('h3', { textAlign: 'center', color: '#1877f2', marginTop: '0' }, { textContent: 'إضافة مصدر للشبكة' }));
         
-        const typeSelect = document.createElement('select'); typeSelect.style.cssText = 'width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;';
+        const typeSelect = create('select', { width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #ddd' });
         Object.keys(SECTION_TITLES).forEach(k => typeSelect.add(new Option(SECTION_TITLES[k], k)));
         card.appendChild(typeSelect);
 
-        const catSelect = document.createElement('select'); catSelect.style.cssText = 'width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;';
+        const catSelect = create('select', { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' });
         card.appendChild(catSelect);
 
         const updateCats = () => {
-            const tempDb = getFreshDB();
+            const db = getFreshDB();
             catSelect.options.length = 0;
-            (tempDb.sectionCats[typeSelect.value] || BASE_CATEGORIES).forEach(c => catSelect.add(new Option(c, c)));
+            (db.sectionCats[typeSelect.value] || BASE_CATEGORIES).forEach(c => catSelect.add(new Option(c, c)));
         };
         typeSelect.onchange = updateCats; updateCats();
 
-        const saveBtn = document.createElement('button'); saveBtn.textContent='💾 حفظ الآن'; saveBtn.style.cssText='width:100%; padding:12px; background:#1877f2; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;';
+        const saveBtn = create('button', { width: '100%', padding: '12px', background: '#1877f2', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }, { textContent: '💾 حفظ الآن' });
         saveBtn.onclick = () => {
-            let latestDb = getFreshDB();
-            latestDb.items.push({ id: Date.now(), title: currentTitle, url: currentUrl, category: catSelect.value, type: typeSelect.value, date: new Date().toISOString() });
-            GM_setValue(DB_KEY, latestDb);
+            let db = getFreshDB();
+            db.items.push({ id: Date.now(), title: currentTitle, url: currentUrl, category: catSelect.value, type: typeSelect.value, date: new Date().toISOString() });
+            GM_setValue(DB_KEY, db);
             saveBtn.textContent='✅ تم الحفظ!'; setTimeout(()=>overlay.remove(), 800);
         };
 
@@ -108,7 +120,7 @@
     }
 
     // ==========================================
-    // 2. Dashboard Logic (The Grid System)
+    // 2. Dashboard Logic (عرض الروابط)
     // ==========================================
     function initDashboard() {
         document.body.innerHTML = '';
@@ -129,25 +141,33 @@
             .badge { position: absolute; top: 4px; right: 4px; background: #f0f2f5; color: #1877f2; font-size: 9px; padding: 2px 5px; border-radius: 8px; font-weight:bold; }
             .tools-area { position: fixed; bottom: 20px; left: 20px; z-index: 1000; display: flex; gap: 8px; background: rgba(255, 255, 255, 0.85); padding: 8px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             .tool-btn { background: #333; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+            
+            /* Modal List */
+            .list-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; display: flex; justify-content: center; align-items: center; }
+            .list-card { background: white; width: 600px; max-height: 80vh; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+            .list-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+            .list-body { overflow-y: auto; flex: 1; padding: 10px; }
+            .link-item { padding: 12px; border-bottom: 1px solid #f9f9f9; display: flex; align-items: center; gap: 10px; }
+            .link-item:hover { background: #f0f7ff; }
+            .link-title { flex: 1; text-decoration: none; color: #333; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         `);
 
-        const container = document.createElement('div');
-        container.className = 'main-grid-container';
+        const container = create('div', {}, { className: 'main-grid-container' });
 
         function drawSection(type, title, color, isFullWidth = false) {
-            const sec = document.createElement('div');
-            sec.className = `section-box ${isFullWidth ? 'full-width' : ''}`;
-            sec.innerHTML = `<div class="section-header" style="color:${color}"><span>${title}</span></div>`;
-            const scroll = document.createElement('div'); scroll.className = 'grid-scroll';
-            const grid = document.createElement('div'); grid.className = 'grid';
+            const sec = create('div', {}, { className: 'section-box' + (isFullWidth ? ' full-width' : '') });
+            sec.appendChild(create('div', { color: color }, { className: 'section-header', textContent: title }));
+            const scroll = create('div', {}, { className: 'grid-scroll' });
+            const grid = create('div', {}, { className: 'grid' });
 
-            const cats = db.sectionCats[type] || BASE_CATEGORIES;
-            cats.forEach(cat => {
+            (db.sectionCats[type] || BASE_CATEGORIES).forEach(cat => {
                 const items = db.items.filter(i => i.type === type && i.category === cat);
-                const card = document.createElement('div');
-                card.className = 'card'; card.style.borderBottom = `3px solid ${color}`;
-                card.innerHTML = `${items.length ? `<span class="badge">${items.length}</span>` : ''}<div class="card-icon">${getIcon(cat, db)}</div><div class="card-title">${cat}</div>`;
-                card.onclick = () => alert(`تحتوي هذه الفئة على ${items.length} روابط مخزنة في متصفحك.`);
+                const card = create('div', { borderBottom: `3px solid ${color}` }, { className: 'card' });
+                card.appendChild(create('span', {}, { className: 'badge', textContent: items.length }));
+                card.appendChild(create('div', {}, { className: 'card-icon', textContent: getIcon(cat, db) }));
+                card.appendChild(create('div', {}, { className: 'card-title', textContent: cat }));
+                
+                card.onclick = () => showLinksList(cat, items);
                 grid.appendChild(card);
             });
             scroll.appendChild(grid); sec.appendChild(scroll); return sec;
@@ -158,19 +178,43 @@
         container.appendChild(drawSection('community', SECTION_TITLES['community'], "#1877f2", true));
         document.body.appendChild(container);
 
-        // Tools
-        const tools = document.createElement('div'); tools.className = 'tools-area';
-        tools.innerHTML = `<button class="tool-btn" id="impBtn">⬆️ استيراد JSON</button><button class="tool-btn" id="expBtn">⬇️ تصدير JSON</button><button class="tool-btn" onclick="location.reload()">🔄 تحديث</button>`;
+        // Tools Area
+        const tools = create('div', {}, { className: 'tools-area' });
+        const impBtn = create('button', {}, { className: 'tool-btn', textContent: '⬆️ استيراد JSON' });
+        const expBtn = create('button', {}, { className: 'tool-btn', textContent: '⬇️ تصدير JSON' });
+        
+        expBtn.onclick = () => { const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getFreshDB())); a.download = "nexus_backup.json"; a.click(); };
+        impBtn.onclick = () => { const inp = document.createElement('input'); inp.type='file'; inp.onchange=(e)=>{ const r = new FileReader(); r.onload=(ev)=>{ GM_setValue(DB_KEY, JSON.parse(ev.target.result)); location.reload(); }; r.readAsText(e.target.files[0]); }; inp.click(); };
+        
+        tools.appendChild(impBtn); tools.appendChild(expBtn);
         document.body.appendChild(tools);
+    }
 
-        document.getElementById('expBtn').onclick = () => {
-            const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getFreshDB())); a.download = "nexus_backup.json"; a.click();
-        };
-        document.getElementById('impBtn').onclick = () => {
-            const inp = document.createElement('input'); inp.type='file'; inp.onchange=(e)=>{
-                const reader = new FileReader(); reader.onload=(ev)=>{ GM_setValue(DB_KEY, JSON.parse(ev.target.result)); location.reload(); };
-                reader.readAsText(e.target.files[0]);
-            }; inp.click();
-        };
+    function showLinksList(category, items) {
+        const overlay = create('div', {}, { className: 'list-overlay' });
+        const card = create('div', {}, { className: 'list-card' });
+        const header = create('div', {}, { className: 'list-header' });
+        header.appendChild(create('span', {}, { textContent: `روابط: ${category} (${items.length})` }));
+        const closeBtn = create('span', { cursor: 'pointer', fontSize: '20px' }, { textContent: '×' });
+        closeBtn.onclick = () => overlay.remove();
+        header.appendChild(closeBtn);
+        
+        const body = create('div', {}, { className: 'list-body' });
+        if(items.length === 0) body.appendChild(create('div', { textAlign: 'center', padding: '20px', color: '#999' }, { textContent: 'لا توجد روابط في هذه الفئة' }));
+
+        items.forEach(item => {
+            const row = create('div', {}, { className: 'link-item' });
+            row.appendChild(create('span', {}, { textContent: '🔗' }));
+            const link = create('a', {}, { className: 'link-title', href: item.url, target: '_blank', textContent: item.title });
+            row.appendChild(link);
+            const delBtn = create('button', { background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d4f' }, { textContent: '🗑️' });
+            delBtn.onclick = () => { if(confirm('حذف الرابط؟')){ let db = getFreshDB(); db.items = db.items.filter(i => i.id !== item.id); GM_setValue(DB_KEY, db); overlay.remove(); initDashboard(); } };
+            row.appendChild(delBtn);
+            body.appendChild(row);
+        });
+
+        card.appendChild(header); card.appendChild(body); overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
     }
 })();
