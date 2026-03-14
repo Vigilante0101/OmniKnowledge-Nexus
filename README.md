@@ -1,5 +1,7 @@
 # 🌌 OmniKnowledge Nexus (V6.6)
+
 > **The Ultimate Local-First Knowledge Management System & Web Collector.**
+Show preview image in README![OmniKnowledge Nexus Dashboard](preview.png)
 
 OmniKnowledge Nexus is a powerful tool designed for researchers, OSINT analysts, and power users who need to capture knowledge from across the web into a organized, visual "Second Brain" without relying on cloud services.
 
